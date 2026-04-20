@@ -32,7 +32,12 @@ class ExportService:
     def _write_workbook(self, rows: list[ExportRow], path: Path) -> None:
         workbook = Workbook()
         worksheet = workbook.active
-        worksheet.title = "Предложения" if path.stem.startswith("suggestion_") else "Предложения и вопросы"
+        if path.stem.startswith("suggestion_"):
+            worksheet.title = "Предложения"
+        elif path.stem.startswith("question_"):
+            worksheet.title = "Вопросы"
+        else:
+            worksheet.title = "Предложения и вопросы"
 
         headers = [
             "Дата",

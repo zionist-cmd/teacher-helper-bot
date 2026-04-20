@@ -462,6 +462,41 @@ def build_router(settings: Settings, database: Database, export_service: ExportS
                 caption="Выгрузка предложений за последние 7 дней.",
             )
 
+    @router.message(Command("export_questions"))
+    async def command_export_questions(message: Message, bot: Bot) -> None:
+        if message.chat.id not in settings.admin_chat_ids:
+            await message.answer("Команда доступна только администратору.")
+            return
+
+        export_path = await export_service.export_submissions(
+            output_dir=settings.export_dir,
+            kind="question",
+        )
+        for admin_chat_id in settings.admin_chat_ids:
+            await bot.send_document(
+                chat_id=admin_chat_id,
+                document=FSInputFile(export_path),
+                caption="Выгрузка всех вопросов.",
+            )
+
+    @router.message(Command("export_questions_weekly"))
+    async def command_export_questions_weekly(message: Message, bot: Bot) -> None:
+        if message.chat.id not in settings.admin_chat_ids:
+            await message.answer("Команда доступна только администратору.")
+            return
+
+        export_path = await export_service.export_submissions(
+            output_dir=settings.export_dir,
+            days=7,
+            kind="question",
+        )
+        for admin_chat_id in settings.admin_chat_ids:
+            await bot.send_document(
+                chat_id=admin_chat_id,
+                document=FSInputFile(export_path),
+                caption="Выгрузка вопросов за последние 7 дней.",
+            )
+
     @router.message(F.text == BTN_NORMATIVE)
     async def open_normative(message: Message, state: FSMContext) -> None:
         await open_menu_section_message(message, state, "normative")
