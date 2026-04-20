@@ -65,11 +65,12 @@ class WeeklyExportService:
                 days=7,
                 kind="suggestion",
             )
-            await self.bot.send_document(
-                chat_id=self.settings.admin_chat_id,
-                document=FSInputFile(path),
-                caption="Автоматическая недельная выгрузка предложений.",
-            )
+            for admin_chat_id in self.settings.admin_chat_ids:
+                await self.bot.send_document(
+                    chat_id=admin_chat_id,
+                    document=FSInputFile(path),
+                    caption="Автоматическая недельная выгрузка предложений.",
+                )
             logger.info("Weekly export sent to admin chat")
         except Exception:
             logger.exception("Weekly export failed")

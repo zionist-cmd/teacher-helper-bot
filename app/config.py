@@ -21,9 +21,9 @@ ALLOWED_SHEET_HOSTS = {"docs.google.com"}
 @dataclass(slots=True)
 class Settings:
     bot_token: str
-    admin_chat_id: int
-    questions_chat_id: int
-    suggestions_chat_id: int
+    admin_chat_ids: tuple[int, ...]
+    questions_chat_ids: tuple[int, ...]
+    suggestions_chat_ids: tuple[int, ...]
     db_path: Path
     export_dir: Path
     demo_mode: bool
@@ -73,6 +73,30 @@ def parse_chat_id(name: str, value: str, *, default: int | None = None) -> int:
     return chat_id
 
 
+def parse_chat_id_list(
+    name: str,
+    value: str,
+    *,
+    default: tuple[int, ...] | None = None,
+) -> tuple[int, ...]:
+    cleaned = value.strip()
+    if not cleaned:
+        if default is None:
+            raise RuntimeError(f"{name} is not set")
+        return default
+
+    chat_ids: list[int] = []
+    seen: set[int] = set()
+    for index, chunk in enumerate(cleaned.split(","), start=1):
+        chat_id = parse_chat_id(f"{name}[{index}]", chunk.strip())
+        if chat_id not in seen:
+            seen.add(chat_id)
+            chat_ids.append(chat_id)
+    if not chat_ids:
+        raise RuntimeError(f"{name} does not contain any valid chat ids")
+    return tuple(chat_ids)
+
+
 def parse_optional_sheet_url(name: str, value: str) -> str | None:
     cleaned = value.strip()
     if not cleaned:
@@ -115,6 +139,9 @@ def load_settings() -> Settings:
     admin_chat_id_raw = os.getenv("ADMIN_CHAT_ID", "").strip()
     questions_chat_id_raw = os.getenv("QUESTIONS_CHAT_ID", "").strip()
     suggestions_chat_id_raw = os.getenv("SUGGESTIONS_CHAT_ID", "").strip()
+    admin_chat_ids_raw = os.getenv("ADMIN_CHAT_IDS", "").strip()
+    questions_chat_ids_raw = os.getenv("QUESTIONS_CHAT_IDS", "").strip()
+    suggestions_chat_ids_raw = os.getenv("SUGGESTIONS_CHAT_IDS", "").strip()
     db_path_raw = os.getenv("DB_PATH", default_db_path()).strip()
     export_dir_raw = os.getenv("EXPORT_DIR", default_export_dir()).strip()
     demo_mode_raw = os.getenv("DEMO_MODE", "false").strip()
@@ -138,23 +165,39 @@ def load_settings() -> Settings:
         else default_virtual_launch_date()
     )
     bot_token = parse_bot_token(bot_token_raw)
-    admin_chat_id = parse_chat_id("ADMIN_CHAT_ID", admin_chat_id_raw)
-    questions_chat_id = parse_chat_id(
-        "QUESTIONS_CHAT_ID",
-        questions_chat_id_raw,
-        default=admin_chat_id,
+    admin_chat_ids = parse_chat_id_list(
+        "ADMIN_CHAT_IDS",
+        admin_chat_ids_raw,
+        default=(parse_chat_id("ADMIN_CHAT_ID", admin_chat_id_raw),),
     )
-    suggestions_chat_id = parse_chat_id(
-        "SUGGESTIONS_CHAT_ID",
-        suggestions_chat_id_raw,
-        default=admin_chat_id,
+    questions_chat_ids = parse_chat_id_list(
+        "QUESTIONS_CHAT_IDS",
+        questions_chat_ids_raw,
+        default=(
+            parse_chat_id(
+                "QUESTIONS_CHAT_ID",
+                questions_chat_id_raw,
+                default=admin_chat_ids[0],
+            ),
+        ),
+    )
+    suggestions_chat_ids = parse_chat_id_list(
+        "SUGGESTIONS_CHAT_IDS",
+        suggestions_chat_ids_raw,
+        default=(
+            parse_chat_id(
+                "SUGGESTIONS_CHAT_ID",
+                suggestions_chat_id_raw,
+                default=admin_chat_ids[0],
+            ),
+        ),
     )
 
     return Settings(
         bot_token=bot_token,
-        admin_chat_id=admin_chat_id,
-        questions_chat_id=questions_chat_id,
-        suggestions_chat_id=suggestions_chat_id,
+        admin_chat_ids=admin_chat_ids,
+        questions_chat_ids=questions_chat_ids,
+        suggestions_chat_ids=suggestions_chat_ids,
         db_path=Path(db_path_raw),
         export_dir=Path(export_dir_raw),
         demo_mode=parse_bool(demo_mode_raw),

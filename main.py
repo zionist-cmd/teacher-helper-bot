@@ -17,27 +17,28 @@ from app.services.weekly_export import WeeklyExportService
 
 async def validate_runtime_configuration(bot: Bot, settings) -> None:
     chat_targets = {
-        "ADMIN_CHAT_ID": settings.admin_chat_id,
-        "QUESTIONS_CHAT_ID": settings.questions_chat_id,
-        "SUGGESTIONS_CHAT_ID": settings.suggestions_chat_id,
+        "ADMIN_CHAT_IDS": settings.admin_chat_ids,
+        "QUESTIONS_CHAT_IDS": settings.questions_chat_ids,
+        "SUGGESTIONS_CHAT_IDS": settings.suggestions_chat_ids,
     }
     checked_chat_ids: set[int] = set()
-    for label, chat_id in chat_targets.items():
-        if chat_id in checked_chat_ids:
-            continue
-        try:
-            await bot.get_chat(chat_id)
-        except (TelegramBadRequest, TelegramForbiddenError) as exc:
-            raise RuntimeError(
-                f"{label} points to an unavailable chat: {chat_id}. "
-                "Add the bot to that chat and verify the id in secrets."
-            ) from exc
-        checked_chat_ids.add(chat_id)
+    for label, chat_ids in chat_targets.items():
+        for chat_id in chat_ids:
+            if chat_id in checked_chat_ids:
+                continue
+            try:
+                await bot.get_chat(chat_id)
+            except (TelegramBadRequest, TelegramForbiddenError) as exc:
+                raise RuntimeError(
+                    f"{label} points to an unavailable chat: {chat_id}. "
+                    "Add the bot to that chat and verify the id in secrets."
+                ) from exc
+            checked_chat_ids.add(chat_id)
 
-    if settings.questions_chat_id == settings.admin_chat_id:
-        logging.warning("QUESTIONS_CHAT_ID is not separated from ADMIN_CHAT_ID")
-    if settings.suggestions_chat_id == settings.admin_chat_id:
-        logging.warning("SUGGESTIONS_CHAT_ID is not separated from ADMIN_CHAT_ID")
+    if set(settings.questions_chat_ids) == set(settings.admin_chat_ids):
+        logging.warning("QUESTIONS_CHAT_IDS is not separated from ADMIN_CHAT_IDS")
+    if set(settings.suggestions_chat_ids) == set(settings.admin_chat_ids):
+        logging.warning("SUGGESTIONS_CHAT_IDS is not separated from ADMIN_CHAT_IDS")
 
 
 async def main() -> None:

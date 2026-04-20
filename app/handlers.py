@@ -248,7 +248,7 @@ def build_router(settings: Settings, database: Database, export_service: ExportS
     ) -> None:
         school = user.get("school") or "не указан"
         username = f"@{user['username']}" if user.get("username") else "не указан"
-        target_chat_id = settings.questions_chat_id if kind == "question" else settings.suggestions_chat_id
+        target_chat_ids = settings.questions_chat_ids if kind == "question" else settings.suggestions_chat_ids
         entry_label = "Вопрос" if kind == "question" else "Предложение"
         payload = "\n".join(
             [
@@ -263,17 +263,20 @@ def build_router(settings: Settings, database: Database, export_service: ExportS
                 escape(text),
             ]
         )
-        try:
-            await bot.send_message(target_chat_id, payload)
-        except (TelegramBadRequest, TelegramForbiddenError):
-            if target_chat_id == settings.admin_chat_id:
-                raise
-            fallback_payload = (
-                f"⚠️ Не удалось отправить уведомление в целевой чат <code>{target_chat_id}</code>.\n"
-                f"Сообщение переадресовано в резервный admin chat <code>{settings.admin_chat_id}</code>.\n\n"
-                f"{payload}"
-            )
-            await bot.send_message(settings.admin_chat_id, fallback_payload)
+        fallback_chat_ids = settings.admin_chat_ids
+        for target_chat_id in target_chat_ids:
+            try:
+                await bot.send_message(target_chat_id, payload)
+            except (TelegramBadRequest, TelegramForbiddenError):
+                if target_chat_id in fallback_chat_ids:
+                    raise
+                fallback_payload = (
+                    f"⚠️ Не удалось отправить уведомление в целевой чат <code>{target_chat_id}</code>.\n"
+                    "Сообщение переадресовано резервным администраторам.\n\n"
+                    f"{payload}"
+                )
+                for admin_chat_id in fallback_chat_ids:
+                    await bot.send_message(admin_chat_id, fallback_payload)
 
     def build_search_text(session: SearchSession, offset: int) -> str:
         category, item = session.results[offset]
@@ -426,7 +429,7 @@ def build_router(settings: Settings, database: Database, export_service: ExportS
 
     @router.message(Command("export"))
     async def command_export(message: Message, bot: Bot) -> None:
-        if message.chat.id != settings.admin_chat_id:
+        if message.chat.id not in settings.admin_chat_ids:
             await message.answer("Команда доступна только администратору.")
             return
 
@@ -434,15 +437,16 @@ def build_router(settings: Settings, database: Database, export_service: ExportS
             output_dir=settings.export_dir,
             kind="suggestion",
         )
-        await bot.send_document(
-            chat_id=settings.admin_chat_id,
-            document=FSInputFile(export_path),
-            caption="Выгрузка всех предложений.",
-        )
+        for admin_chat_id in settings.admin_chat_ids:
+            await bot.send_document(
+                chat_id=admin_chat_id,
+                document=FSInputFile(export_path),
+                caption="Выгрузка всех предложений.",
+            )
 
     @router.message(Command("export_weekly"))
     async def command_export_weekly(message: Message, bot: Bot) -> None:
-        if message.chat.id != settings.admin_chat_id:
+        if message.chat.id not in settings.admin_chat_ids:
             await message.answer("Команда доступна только администратору.")
             return
 
@@ -451,11 +455,12 @@ def build_router(settings: Settings, database: Database, export_service: ExportS
             days=7,
             kind="suggestion",
         )
-        await bot.send_document(
-            chat_id=settings.admin_chat_id,
-            document=FSInputFile(export_path),
-            caption="Выгрузка предложений за последние 7 дней.",
-        )
+        for admin_chat_id in settings.admin_chat_ids:
+            await bot.send_document(
+                chat_id=admin_chat_id,
+                document=FSInputFile(export_path),
+                caption="Выгрузка предложений за последние 7 дней.",
+            )
 
     @router.message(F.text == BTN_NORMATIVE)
     async def open_normative(message: Message, state: FSMContext) -> None:

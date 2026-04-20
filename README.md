@@ -15,7 +15,7 @@
 - поддержка внешней базы знаний из Google Sheets CSV с fallback на встроенный контент;
 - сохранение данных в SQLite;
 - опциональный demo-режим с историческими обращениями и виртуальной датой запуска;
-- раздельные чаты для вопросов и предложений с fail-fast проверкой на старте;
+- раздельные чаты и списки получателей для вопросов и предложений с fail-fast проверкой на старте;
 - выгрузка обращений в Excel командой `/export` и фоновой недельной отправкой.
 
 ## Структура
@@ -59,8 +59,11 @@ pip install -r requirements.txt
 ```env
 BOT_TOKEN=
 ADMIN_CHAT_ID=
+ADMIN_CHAT_IDS=
 QUESTIONS_CHAT_ID=
+QUESTIONS_CHAT_IDS=
 SUGGESTIONS_CHAT_ID=
+SUGGESTIONS_CHAT_IDS=
 DB_PATH=bot.sqlite3
 EXPORT_DIR=exports
 DEMO_MODE=false
@@ -101,8 +104,11 @@ python main.py
 ```env
 BOT_TOKEN=...
 ADMIN_CHAT_ID=...
+ADMIN_CHAT_IDS=...
 QUESTIONS_CHAT_ID=...
+QUESTIONS_CHAT_IDS=...
 SUGGESTIONS_CHAT_ID=...
+SUGGESTIONS_CHAT_IDS=...
 PYTHONUNBUFFERED=1
 ```
 
@@ -151,7 +157,8 @@ BOT_TIMEZONE=Asia/Qyzylorda
 - при необходимости скорректировать `VIRTUAL_LAUNCH_DATE`, если нужна другая дата имитации запуска;
 - для фоновой недельной выгрузки включите `WEEKLY_EXPORT_ENABLED=true` и задайте время отправки;
 - `QUESTIONS_CHAT_ID` и `SUGGESTIONS_CHAT_ID` можно развести по разным модераторским чатам;
-- бот на старте проверяет доступность `ADMIN_CHAT_ID`, `QUESTIONS_CHAT_ID` и `SUGGESTIONS_CHAT_ID`, поэтому placeholders и битые id больше не проходят;
+- если нужен общий чат и отдельные получатели, используйте списки `ADMIN_CHAT_IDS`, `QUESTIONS_CHAT_IDS`, `SUGGESTIONS_CHAT_IDS` через запятую;
+- бот на старте проверяет доступность `ADMIN_CHAT_ID`, `ADMIN_CHAT_IDS`, `QUESTIONS_CHAT_ID`, `QUESTIONS_CHAT_IDS`, `SUGGESTIONS_CHAT_ID` и `SUGGESTIONS_CHAT_IDS`, поэтому placeholders и битые id больше не проходят;
 - верхнее меню теперь работает на inline-навигации и не раздувает чат при переходах между разделами.
 "# baljan" 
 "# baljan" 
